@@ -1,8 +1,5 @@
-fastapi
-uvicorn
-requests
-beautifulsoup4
-python-dotenv
 pyrogram
 tgcrypto
 aiohttp
+python-dotenv
+beautifulsoup4
