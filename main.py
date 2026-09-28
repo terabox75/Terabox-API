@@ -92,20 +92,26 @@ async def terabox_command(client, message):
         if os.path.exists(file_name):
             os.remove(file_name)
 
-# FastAPI Startup event with background task handling for Pyrogram
+# Background runner function for Pyrogram
+async def start_telegram_bot():
+    if API_ID and API_HASH and BOT_TOKEN:
+        try:
+            print("🤖 Starting Pyrogram Bot client...")
+            await tg_bot.start()
+            print("🤖 Telegram Bot started and actively listening!")
+            # Keep the bot running
+            await asyncio.Future()
+        except Exception as e:
+            print(f"[ERROR] Pyrogram bot failed: {e}")
+            traceback.print_exc()
+    else:
+        print("⚠️ [WARNING] Telegram credentials are missing!")
+
+# FastAPI Startup event - runs bot as a background task
 @app.on_event("startup")
 async def startup_event():
     print("[DEBUG] FastAPI startup event triggered...")
-    if API_ID and API_HASH and BOT_TOKEN:
-        try:
-            # Pyrogram bot ko start kar rahe hain
-            await tg_bot.start()
-            print("🤖 Telegram Bot started successfully!")
-        except Exception as e:
-            print(f"[ERROR] Failed to start Pyrogram bot: {e}")
-            traceback.print_exc()
-    else:
-        print("⚠️ [WARNING] Telegram credentials are missing in environment variables!")
+    asyncio.create_task(start_telegram_bot())
 
 @app.on_event("shutdown")
 async def shutdown_event():
