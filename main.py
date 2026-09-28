@@ -49,6 +49,7 @@ LINK_TTL = int(os.getenv("LINK_TTL", "3600"))
 CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))
 MAX_FILES = int(os.getenv("MAX_FOLDER_FILES", "200"))
 MAX_DEPTH = int(os.getenv("MAX_FOLDER_DEPTH", "3"))
+PROXY_URL = os.getenv("PROXY_URL", "").strip() or None  # optional outbound proxy
 
 APP_ID = "250528"
 ALLOWED_DOMAINS = ("terabox.com", "1024terabox.com", "teraboxapp.com", "4funbox.com")
@@ -253,7 +254,9 @@ async def lifespan(app: FastAPI):
     else:
         log.warning("NDUS_COOKIE not set; most links will fail to return download links.")
     timeout = httpx.Timeout(connect=15, read=60, write=15, pool=15)
-    async with httpx.AsyncClient(headers=headers, timeout=timeout, follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        headers=headers, timeout=timeout, follow_redirects=True, proxy=PROXY_URL
+    ) as client:
         app.state.client = client
         yield
 
