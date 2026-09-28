@@ -281,7 +281,17 @@ def base_url(request: Request) -> str:
 @app.post("/api/extract", response_model=ExtractResponse, dependencies=[Depends(require_api_key)])
 @limiter.limit(EXTRACT_LIMIT)
 async def extract(request: Request, body: ExtractRequest):
-    code = parse_share_url(body.url)
+    return await do_extract(request, body.url)
+
+
+@app.get("/api/extract", response_model=ExtractResponse, dependencies=[Depends(require_api_key)])
+@limiter.limit(EXTRACT_LIMIT)
+async def extract_get(request: Request, url: str = Query(..., max_length=500)):
+    return await do_extract(request, url.strip())
+
+
+async def do_extract(request: Request, url: str) -> ExtractResponse:
+    code = parse_share_url(url)
     client: httpx.AsyncClient = request.app.state.client
 
     cached = _cache.get(code)
