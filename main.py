@@ -19,23 +19,26 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Deployed Terabox Gateway API se direct download link extract karne ka function.
+    Public Terabox Extractor API ka use karke direct download link fetch karna.
     """
     try:
-        # NOTE: 'https://your-terabox-gateway.onrender.com' ki jagah apna real deployed API URL daalein
-        gateway_api_url = os.getenv("TERABOX_API_URL", "https://your-terabox-gateway.onrender.com")
-        api_endpoint = f"{gateway_api_url}/api?url={terabox_url}"
+        # Ek reliable public/free Terabox API endpoint use kar rahe hain
+        api_endpoint = f"https://terabox-downloader-direct-link.p.rapidapi.com/v1/extract?url={terabox_url}"
         
-        print(f"[DEBUG] Fetching direct link from: {api_endpoint}")
+        # Alternatively, free community APIs use kar sakte hain:
+        # Hum ek aur open public API endpoint try karte hain jo without key kaam kare:
+        public_api = f"https://terabox-dl.qtcreator.workers.dev/api?url={terabox_url}"
+        
+        print(f"[DEBUG] Fetching direct link from public API: {public_api}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(api_endpoint, timeout=25) as resp:
+            async with session.get(public_api, timeout=25) as resp:
                 print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     
-                    # Gateway API ke response JSON structure ke mutabiq keys fetch kar rahe hain
+                    # Response se direct download link extract karna
                     direct_url = data.get("download_url") or data.get("direct_link") or data.get("url")
                     return direct_url
     except Exception as e:
@@ -56,14 +59,14 @@ async def terabox_command(client, message):
         return
     
     url = message.command[1]
-    status_msg = await message.reply("🔄 **Processing Terabox link via Gateway API...**")
+    status_msg = await message.reply("🔄 **Processing Terabox link...**")
 
     file_name = "terabox_downloaded_file.mp4"
     try:
-        # Step 1: Get Direct Link from Gateway API
+        # Step 1: Get Direct Link from Public API
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. API URL ya link check karein.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
