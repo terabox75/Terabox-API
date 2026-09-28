@@ -1,4 +1,6 @@
 import os
+import asyncio
+import traceback
 import aiohttp
 from pyrogram import Client, filters
 
@@ -17,25 +19,34 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Terabox link se direct stream/download link extract karne ka logic.
+    Deployed Terabox Gateway API se direct download link extract karne ka function.
     """
     try:
-        api_endpoint = f"https://terabox-dl-api.example.com/api?url={terabox_url}"
-        print(f"[DEBUG] Fetching direct link from API endpoint: {api_endpoint}")
+        # NOTE: 'https://your-terabox-gateway.onrender.com' ki jagah apna real deployed API URL daalein
+        gateway_api_url = os.getenv("TERABOX_API_URL", "https://your-terabox-gateway.onrender.com")
+        api_endpoint = f"{gateway_api_url}/api?url={terabox_url}"
+        
+        print(f"[DEBUG] Fetching direct link from: {api_endpoint}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(api_endpoint, timeout=15) as resp:
+            async with session.get(api_endpoint, timeout=25) as resp:
+                print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
-                    return data.get("download_url")
+                    print(f"[DEBUG] API Response Data: {data}")
+                    
+                    # Gateway API ke response JSON structure ke mutabiq keys fetch kar rahe hain
+                    direct_url = data.get("download_url") or data.get("direct_link") or data.get("url")
+                    return direct_url
     except Exception as e:
         print(f"[ERROR] Exception in fetch_terabox_direct_link: {e}")
+        traceback.print_exc()
     return None
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     print(f"[DEBUG] Received /start command from user: {message.from_user.id}")
-    await message.reply("👋 **Hello!** Send me a `/terabox <link>` command to download and upload files to Telegram.")
+    await message.reply("👋 **Hello!** Send me a `/terabox <link>` command and I will download and upload it to Telegram for you.")
 
 @app.on_message(filters.command("terabox") & filters.private)
 async def terabox_command(client, message):
@@ -45,17 +56,19 @@ async def terabox_command(client, message):
         return
     
     url = message.command[1]
-    status_msg = await message.reply("🔄 **Processing Terabox link...**")
+    status_msg = await message.reply("🔄 **Processing Terabox link via Gateway API...**")
 
     file_name = "terabox_downloaded_file.mp4"
     try:
+        # Step 1: Get Direct Link from Gateway API
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. API URL ya link check karein.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
         
+        # Step 2: Download file locally
         async with aiohttp.ClientSession() as session:
             async with session.get(direct_link) as resp:
                 if resp.status == 200:
@@ -67,6 +80,8 @@ async def terabox_command(client, message):
                     return
 
         await status_msg.edit("📤 **Uploading file to Telegram...**")
+        
+        # Step 3: Send file to Telegram
         await client.send_document(
             chat_id=message.chat.id,
             document=file_name,
@@ -75,10 +90,12 @@ async def terabox_command(client, message):
         await status_msg.delete()
 
     except Exception as e:
-        print(f"[ERROR] Critical error: {e}")
+        print(f"[ERROR] Critical error in terabox_command: {e}")
+        traceback.print_exc()
         await status_msg.edit(f"❌ **Critical Error Occurred:**\n`{str(e)}`")
     
     finally:
+        # Cleanup temporary file
         if os.path.exists(file_name):
             os.remove(file_name)
 
