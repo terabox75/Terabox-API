@@ -19,15 +19,11 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Public Terabox Extractor API ka use karke direct download link fetch karna.
+    Naye active public Terabox API endpoint se direct download link fetch karna.
     """
     try:
-        # Ek reliable public/free Terabox API endpoint use kar rahe hain
-        api_endpoint = f"https://terabox-downloader-direct-link.p.rapidapi.com/v1/extract?url={terabox_url}"
-        
-        # Alternatively, free community APIs use kar sakte hain:
-        # Hum ek aur open public API endpoint try karte hain jo without key kaam kare:
-        public_api = f"https://terabox-dl.qtcreator.workers.dev/api?url={terabox_url}"
+        # Ek active public community API endpoint
+        public_api = f"https://terabox-dl-api.hf.space/api?url={terabox_url}"
         
         print(f"[DEBUG] Fetching direct link from public API: {public_api}")
         
@@ -38,7 +34,7 @@ async def fetch_terabox_direct_link(terabox_url: str) -> str:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     
-                    # Response se direct download link extract karna
+                    # Direct download link key extract karna
                     direct_url = data.get("download_url") or data.get("direct_link") or data.get("url")
                     return direct_url
     except Exception as e:
