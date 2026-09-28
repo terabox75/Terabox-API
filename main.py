@@ -1,19 +1,14 @@
 import os
-import asyncio
-import traceback
 import aiohttp
-from fastapi import FastAPI
 from pyrogram import Client, filters
-
-app = FastAPI()
 
 # Credentials from Environment Variables
 API_ID = int(os.getenv("API_ID", 0))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 
-# Pyrogram Bot Client
-tg_bot = Client(
+# Pyrogram Bot Client Initialization
+app = Client(
     "terabox_tg_bot", 
     api_id=API_ID, 
     api_hash=API_HASH, 
@@ -21,32 +16,28 @@ tg_bot = Client(
 )
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
+    """
+    Terabox link se direct stream/download link extract karne ka logic.
+    """
     try:
         api_endpoint = f"https://terabox-dl-api.example.com/api?url={terabox_url}"
         print(f"[DEBUG] Fetching direct link from API endpoint: {api_endpoint}")
         
         async with aiohttp.ClientSession() as session:
             async with session.get(api_endpoint, timeout=15) as resp:
-                print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
                     return data.get("download_url")
     except Exception as e:
         print(f"[ERROR] Exception in fetch_terabox_direct_link: {e}")
-        traceback.print_exc()
     return None
 
-@app.get("/")
-def home():
-    return {"status": "Terabox Telegram Uploader Bot is Running!"}
-
-# /start command handler
-@tg_bot.on_message(filters.command("start") & filters.private)
+@app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     print(f"[DEBUG] Received /start command from user: {message.from_user.id}")
     await message.reply("👋 **Hello!** Send me a `/terabox <link>` command to download and upload files to Telegram.")
 
-@tg_bot.on_message(filters.command("terabox") & filters.private)
+@app.on_message(filters.command("terabox") & filters.private)
 async def terabox_command(client, message):
     print(f"[DEBUG] Received /terabox command from user: {message.from_user.id}")
     if len(message.command) < 2:
@@ -60,7 +51,7 @@ async def terabox_command(client, message):
     try:
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Debug Error:** Direct download link extract nahi ho paya.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
@@ -84,38 +75,13 @@ async def terabox_command(client, message):
         await status_msg.delete()
 
     except Exception as e:
-        print(f"[ERROR] Critical error in terabox_command: {e}")
-        traceback.print_exc()
+        print(f"[ERROR] Critical error: {e}")
         await status_msg.edit(f"❌ **Critical Error Occurred:**\n`{str(e)}`")
     
     finally:
         if os.path.exists(file_name):
             os.remove(file_name)
 
-# Background runner function for Pyrogram
-async def start_telegram_bot():
-    if API_ID and API_HASH and BOT_TOKEN:
-        try:
-            print("🤖 Starting Pyrogram Bot client...")
-            await tg_bot.start()
-            print("🤖 Telegram Bot started and actively listening!")
-            # Keep the bot running
-            await asyncio.Future()
-        except Exception as e:
-            print(f"[ERROR] Pyrogram bot failed: {e}")
-            traceback.print_exc()
-    else:
-        print("⚠️ [WARNING] Telegram credentials are missing!")
-
-# FastAPI Startup event - runs bot as a background task
-@app.on_event("startup")
-async def startup_event():
-    print("[DEBUG] FastAPI startup event triggered...")
-    asyncio.create_task(start_telegram_bot())
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    print("[DEBUG] FastAPI shutdown event triggered...")
-    if tg_bot.is_initialized:
-        await tg_bot.stop()
-        print("🛑 Telegram Bot stopped safely.")
+if __name__ == "__main__":
+    print("🤖 Starting Telegram Bot natively...")
+    app.run()
