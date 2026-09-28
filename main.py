@@ -19,22 +19,22 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Naye active public Terabox API endpoint se direct download link fetch karna.
+    Apni deployed Render Gateway API se direct download link fetch karna.
     """
     try:
-        # Ek active public community API endpoint
-        public_api = f"https://terabox-dl-api.hf.space/api?url={terabox_url}"
+        gateway_api_url = "https://terabox-gateway-g64q.onrender.com"
+        api_endpoint = f"{gateway_api_url}/api?url={terabox_url}"
         
-        print(f"[DEBUG] Fetching direct link from public API: {public_api}")
+        print(f"[DEBUG] Fetching direct link from personal gateway: {api_endpoint}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(public_api, timeout=25) as resp:
+            async with session.get(api_endpoint, timeout=30) as resp:
                 print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     
-                    # Direct download link key extract karna
+                    # Gateway response se direct download link extract karna
                     direct_url = data.get("download_url") or data.get("direct_link") or data.get("url")
                     return direct_url
     except Exception as e:
@@ -55,14 +55,14 @@ async def terabox_command(client, message):
         return
     
     url = message.command[1]
-    status_msg = await message.reply("🔄 **Processing Terabox link...**")
+    status_msg = await message.reply("🔄 **Processing Terabox link via Personal Gateway...**")
 
     file_name = "terabox_downloaded_file.mp4"
     try:
-        # Step 1: Get Direct Link from Public API
+        # Step 1: Get Direct Link from Personal Gateway API
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. Gateway status check karein.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
