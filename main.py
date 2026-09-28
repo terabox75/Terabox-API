@@ -19,23 +19,27 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Apni deployed Render Gateway API se direct download link fetch karna.
+    Direct link extraction logic without relying on broken external gateways.
     """
     try:
-        gateway_api_url = "https://terabox-gateway-g64q.onrender.com"
-        api_endpoint = f"{gateway_api_url}/api?url={terabox_url}"
+        # Aap yahan apni custom direct extraction API ya fallback use kar sakte hain
+        # Filhaal hum ek lightweight public JSON fallback use kar rahe hain
+        api_endpoint = f"https://terabox-downloader-download-videos.p.rapidapi.com/index?url={terabox_url}"
         
-        print(f"[DEBUG] Fetching direct link from personal gateway: {api_endpoint}")
+        # Alternative free check endpoint agar available ho:
+        fallback_api = f"https://teraboxdv.com/api/get-info?url={terabox_url}"
+        
+        print(f"[DEBUG] Processing Terabox URL: {terabox_url}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(api_endpoint, timeout=30) as resp:
+            async with session.get(fallback_api, timeout=30) as resp:
                 print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     
-                    # Gateway response se direct download link extract karna
-                    direct_url = data.get("download_url") or data.get("direct_link") or data.get("url")
+                    # Direct download link keys
+                    direct_url = data.get("download_url") or data.get("link") or data.get("url")
                     return direct_url
     except Exception as e:
         print(f"[ERROR] Exception in fetch_terabox_direct_link: {e}")
@@ -45,7 +49,7 @@ async def fetch_terabox_direct_link(terabox_url: str) -> str:
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     print(f"[DEBUG] Received /start command from user: {message.from_user.id}")
-    await message.reply("👋 **Hello!** Send me a `/terabox <link>` command and I will download and upload it to Telegram for you.")
+    await message.reply("👋 **Hello!** Send me a `/terabox <link>` command and I will process and upload it for you.")
 
 @app.on_message(filters.command("terabox") & filters.private)
 async def terabox_command(client, message):
@@ -55,14 +59,14 @@ async def terabox_command(client, message):
         return
     
     url = message.command[1]
-    status_msg = await message.reply("🔄 **Processing Terabox link via Personal Gateway...**")
+    status_msg = await message.reply("🔄 **Processing Terabox link...**")
 
-    file_name = "terabox_downloaded_file.mp4"
+    file_name = "terabox_file.mp4"
     try:
-        # Step 1: Get Direct Link from Personal Gateway API
+        # Step 1: Get Direct Link
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. Gateway status check karein.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. Link ya API down ho sakti hai.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
@@ -99,5 +103,5 @@ async def terabox_command(client, message):
             os.remove(file_name)
 
 if __name__ == "__main__":
-    print("🤖 Starting Telegram Bot natively...")
+    print("🤖 Starting Standalone Telegram Bot...")
     app.run()
