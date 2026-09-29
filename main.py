@@ -19,27 +19,23 @@ app = Client(
 
 async def fetch_terabox_direct_link(terabox_url: str) -> str:
     """
-    Direct link extraction logic without relying on broken external gateways.
+    Alternative active public API endpoint se direct download link fetch karna.
     """
     try:
-        # Aap yahan apni custom direct extraction API ya fallback use kar sakte hain
-        # Filhaal hum ek lightweight public JSON fallback use kar rahe hain
-        api_endpoint = f"https://terabox-downloader-download-videos.p.rapidapi.com/index?url={terabox_url}"
+        # Naya alternative public API endpoint
+        public_api = f"https://terabox-dl.asmindian.workers.dev/api?url={terabox_url}"
         
-        # Alternative free check endpoint agar available ho:
-        fallback_api = f"https://teraboxdv.com/api/get-info?url={terabox_url}"
-        
-        print(f"[DEBUG] Processing Terabox URL: {terabox_url}")
+        print(f"[DEBUG] Fetching direct link from API: {public_api}")
         
         async with aiohttp.ClientSession() as session:
-            async with session.get(fallback_api, timeout=30) as resp:
+            async with session.get(public_api, timeout=30) as resp:
                 print(f"[DEBUG] API Response Status: {resp.status}")
                 if resp.status == 200:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     
-                    # Direct download link keys
-                    direct_url = data.get("download_url") or data.get("link") or data.get("url")
+                    # Direct download link keys extract karna
+                    direct_url = data.get("download_url") or data.get("url") or data.get("link")
                     return direct_url
     except Exception as e:
         print(f"[ERROR] Exception in fetch_terabox_direct_link: {e}")
@@ -66,7 +62,7 @@ async def terabox_command(client, message):
         # Step 1: Get Direct Link
         direct_link = await fetch_terabox_direct_link(url)
         if not direct_link:
-            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya. Link ya API down ho sakti hai.")
+            await status_msg.edit("❌ **Error:** Direct download link extract nahi ho paya.")
             return
 
         await status_msg.edit("📥 **Downloading file to server...**")
@@ -103,5 +99,5 @@ async def terabox_command(client, message):
             os.remove(file_name)
 
 if __name__ == "__main__":
-    print("🤖 Starting Standalone Telegram Bot...")
+    print("🤖 Starting Telegram Bot...")
     app.run()
